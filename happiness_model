@@ -1,0 +1,163 @@
+import pandas as pd
+import numpy as np
+import sklearn as sk
+
+from scipy import stats
+from sklearn import model_selection, metrics, linear_model, datasets, feature_selection
+from sklearn.preprocessing import LabelEncoder
+
+import matplotlib.pyplot as plt
+
+
+happiness = pd.read_csv('happiness.csv', index_col=0)
+
+happiness.corr()['Happiness Score']
+
+#determine correlation between Happiness score and other factors
+#can see there's a strong link between happiness and GDP, Life expectancy.
+
+happiness.rename(columns = {'Economy (GDP per Capita)': 'Economy', 'Health (Life Expectancy)':'Health','Trust (Government Corruption)':'Corruption'}, inplace=True)
+happiness
+
+plt.scatter(happiness['Happiness Score'],happiness['Health'])
+
+plt.scatter(happiness['Happiness Score'], happiness['Economy'])
+
+plt.scatter(happiness['Happiness Score'], happiness['Corruption'])
+
+#not a strong correlation
+
+y = happiness['Happiness Score']
+x = happiness['Health']
+
+np_intercept, np_slope = np.polynomial.polynomial.polyfit(x, y, 1)
+
+plt.scatter(x,y);
+plt.plot(x,np_intercept + np_slope*x, color='red');
+
+happiness = happiness[happiness['Happiness Score']>3.2]
+happiness
+# to remove outliers sitting at bottom
+
+def happiness_model(x):
+    return x*np_slope + np_intercept
+
+#formula to return happiness score when input health score
+
+happiness_model(0.42864)
+
+from sklearn import linear_model
+reg = linear_model.LinearRegression()
+reg.fit(happiness[['Health','Economy']], happiness['Happiness Score'])
+a,b = reg.coef_
+c = reg.intercept_
+
+#trying to build polynomial regression formula using more than one factor
+
+print(a,b,c)
+
+def model(x,z):
+    return a*x + b*z + c
+
+#can seeing using a polynomial model the predicted happiness score is closer to 3.465 for Rwanda
+#than using linear regression with one factor
+
+model(.22208,.42864)
+#testing model
+
+model(1.30782,.89667)
+#using economy and health scores from Belgium, actual happiness score is 6.7
+
+population = pd.read_csv("population.csv", index_col = 0, parse_dates = True)
+
+#introducing new data set with population per country
+
+population = population['2013']
+population
+
+population = population.dropna(axis = 0,how='all')
+population
+
+
+happiness_pop = pd.concat([happiness,population],axis=1,join='inner')
+
+#joining datasets based on country (index)
+
+happiness_pop
+
+happiness_pop.rename(columns = {'2013':'Population'}, inplace=True)
+happiness_pop
+
+#renaming column header of new dataset
+
+plt.scatter(happiness_pop['Happiness Score'],happiness_pop['Population'])
+
+#scales are too different to see correlation
+
+happiness_pop.corr()['Happiness Score']
+
+#can see that population is not correlated with happiness score at all
+
+weather = pd.read_csv("weather.csv", index_col = 0, parse_dates = True)
+
+#import file with environmental factors
+
+happiness_multi = pd.concat([happiness_pop, weather], axis = 1, join = 'inner')
+happiness_multi
+
+#concatenate based on country
+
+happiness_multi.corr()['Happiness Score']
+
+plt.scatter(happiness_multi['temp_mean_annual'], happiness_multi['Happiness Score'])
+
+#can see avg annual temp not actually correlated to happiness score
+
+import mpl_toolkits.mplot3d as m3d
+
+fig3d = m3d.Axes3D(plt.figure())
+fig3d.scatter3D(happiness_multi['temp_mean_annual'], happiness_multi['Economy'], happiness_multi['Happiness Score'], color='blue')
+fig3d.set_xlabel('Mean annual temp')
+fig3d.set_ylabel('GDP')
+fig3d.set_zlabel('Happiness Score')
+plt.show()
+
+test, train = model_selection.train_test_split(happiness_multi, test_size=0.3, random_state=0)
+test.tail(5)
+
+#split the data into test and train (30/70 split)
+
+from sklearn import linear_model
+reg = linear_model.LinearRegression()
+reg.fit(train[['Health','Economy','rain_driestMonth']], train['Happiness Score'])
+a,b,c = reg.coef_
+d = reg.intercept_
+
+def model(x,z,q):
+    return a*x + b*z + c*q + d
+
+model(0.93156, 1.33358, 11.5888329)
+
+#testing australia as a value, has happiness score of 7.2reg = linear_model.LinearRegression()
+
+reg = linear_model.LinearRegression()
+
+include_cols = ['Health',
+             'Economy',
+             'rain_driestMonth',
+              'Family',
+              'Freedom',
+              'Corruption'
+             ]
+
+train[include_cols].head()
+
+reg.fit(train[include_cols], train['Happiness Score'])
+
+reg.fit(train[include_cols], train['Happiness Score'])
+
+reg.score(test[include_cols],test['Happiness Score'])
+
+#can see that r^2 is not terribly off
+
+
